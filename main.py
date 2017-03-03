@@ -81,10 +81,11 @@ class main_window(QWidget):
         self.c = 0.2
         self.p = 1.29
         self.s = 0.25
-        self.u = 300          # Скорость выхода газов.
+        self.u = 300         # Скорость выхода газов.
         self.g = 9.8
         self.mt = 30         # Масса топлива.
         self.m0 = 50         # Масса снаряда без топлива.
+        self.mr = 3          # Расход топлива в секунду, кг.
 
         self.m = 0          # Общая масса.
         self.dm = 0.0       # Производная массы снаряда.
@@ -107,8 +108,8 @@ class main_window(QWidget):
 
     def Fv(self, t, v, q):                              # Функция производной скорости.
         if self.m > self.m0:
-            self.m = 36 - math.exp(t)                   # Закон изменения массы снаряда.
-            self.dm=-math.exp(t)
+            self.m -= self.mr * self.h                   # Закон изменения массы снаряда.
+            self.dm=-self.mr * self.h
         else:
             self.m=self.m0
             self.dm=0
@@ -123,33 +124,33 @@ class main_window(QWidget):
 
     # Метод вычисляет производные t, v, q, методом Рунге-Кутта.
     def runge_kutt(self, t, v, q):
-        h = 0.05
-        k1 = h * self.Fx(t, v, q)           # Вычисление первых коэффициентов для д.у.
-        k2 = h * self.Fx(t+h/2, v, q)
-        k3 = h * self.Fx(t+h/2, v, q)
-        k4 = h * self.Fx(t+h, v, q)
+        self.h = 0.05
+        k1 = self.h * self.Fx(t, v, q)           # Вычисление первых коэффициентов для д.у.
+        k2 = self.h * self.Fx(t+self.h/2, v, q)
+        k3 = self.h * self.Fx(t+self.h/2, v, q)
+        k4 = self.h * self.Fx(t+self.h, v, q)
 
-        l1 = h * self.Fy(t, v, q)           # Вычисление вторых коэффициентов для д.у.
-        l2 = h * self.Fy(t+h/2, v, q)
-        l3 = h * self.Fy(t+h/2, v, q)
-        l4 = h * self.Fy(t+h, v, q)
+        l1 = self.h * self.Fy(t, v, q)           # Вычисление вторых коэффициентов для д.у.
+        l2 = self.h * self.Fy(t+self.h/2, v, q)
+        l3 = self.h * self.Fy(t+self.h/2, v, q)
+        l4 = self.h * self.Fy(t+self.h, v, q)
 
-        m1 = h * self.Fv(t, v, q)           # Вычисление третьих коэффициентов для д.у.
-        m2 = h * self.Fv(t+h/2, v+m1/2, q)
-        m3 = h * self.Fv(t+h/2, v+m2/2, q)
-        m4 = h * self.Fv(t+h, v+m3, q)
+        m1 = self.h * self.Fv(t, v, q)           # Вычисление третьих коэффициентов для д.у.
+        m2 = self.h * self.Fv(t+self.h/2, v+m1/2, q)
+        m3 = self.h * self.Fv(t+self.h/2, v+m2/2, q)
+        m4 = self.h * self.Fv(t+self.h, v+m3, q)
 
-        n1 = h * self.Fq(t, v, q)           # Вычисление четвертых коэффициентов для д.у.
-        n2 = h * self.Fq(t+h/2, v, q+n1/2)
-        n3 = h * self.Fq(t+h/2, v, q+n2/2)
-        n4 = h * self.Fq(t+h, v, q+n3)
+        n1 = self.h * self.Fq(t, v, q)           # Вычисление четвертых коэффициентов для д.у.
+        n2 = self.h * self.Fq(t+self.h/2, v, q+n1/2)
+        n3 = self.h * self.Fq(t+self.h/2, v, q+n2/2)
+        n4 = self.h * self.Fq(t+self.h, v, q+n3)
 
         self.x += 1/6 * (k1+2*k2+2*k3+k4)   # Вычисление производных координат x, y, скорости, угла полета.
         self.y += 1/6 * (l1+2*l2+2*l3+l4)
         self.v += 1/6 * (m1+2*m2+2*m3+m4)
         self.q += 1/6 * (n1+2*n2+2*n3+n4)
 
-        self.t += h
+        self.t += self.h
 
     def b_clear_handler(self):
         self.graph.clear_grap()
@@ -161,15 +162,16 @@ class main_window(QWidget):
         def b_calculation_handler(self):
             # Заполняем переменные выбранными пользователем параметрами.
             self.q = int(self.le_degrees.text()) * math.pi/180
-            self.c = int(self.le_c.text()) / 100
-            self.p = int(self.le_p.text()) / 100
-            self.s = int(self.le_s.text()) / 100
+            self.c = int(self.le_c.text()) / 1000
+            self.p = int(self.le_p.text()) / 1000
+            self.s = (math.pow(int(self.le_diam.text()) * math.pow(10, -3), 2) * math.pi) / 4
             self.u = int(self.le_u.text())
-            self.g = int(self.le_g.text()) / 100
+            self.g = int(self.le_g.text()) / 1000
             self.v = int(self.le_v.text())
             self.mt = int(self.le_mt.text())
             self.m0 = int(self.le_m0.text())
             self.m = self.m0 + self.mt
+            self.mr = int(self.le_mrs.text())
 
             # Получаемые в ходе расчета переменные.
             x_end_fuel = 0                                          # Тут будет лежать точка по x, где закончится топливо.
@@ -270,24 +272,28 @@ class main_window(QWidget):
         self.le_mt = QLineEdit('30')
         self.le_mt.setValidator(QIntValidator(0, 1000000, self))
 
-        l3 = QLabel('Коэффициент сопротивления воздуха (10^-2): ')
-        self.le_c = QLineEdit('20')
+        l9 = QLabel('Расход топлива в секунду, кг: ')
+        self.le_mrs = QLineEdit('3')
+        self.le_mrs.setValidator(QIntValidator(0, 1000000, self))
+
+        l3 = QLabel('Коэффициент сопротивления воздуха (10^-3): ')
+        self.le_c = QLineEdit('200')
         self.le_c.setValidator(QIntValidator(0, 1000000, self))
 
-        l4 = QLabel('Плотность воздуха (10^-2), кг/м^3: ')
-        self.le_p = QLineEdit('129')
+        l4 = QLabel('Плотность воздуха (10^-3), кг/м^3: ')
+        self.le_p = QLineEdit('1200')
         self.le_p.setValidator(QIntValidator(0, 1000000, self))
 
-        l5 = QLabel('Площадь поперечного сечения (10^-2), м^2: ')
-        self.le_s = QLineEdit('25')
-        self.le_s.setValidator(QIntValidator(0, 1000000, self))
+        l5 = QLabel('Диаметр ракеты, мм: ')
+        self.le_diam = QLineEdit('250')
+        self.le_diam.setValidator(QIntValidator(0, 1000000, self))
 
         l6 = QLabel('Скорость выхода газов, м/с: ')
         self.le_u = QLineEdit('300')
         self.le_u.setValidator(QIntValidator(0, 1000000, self))
 
-        l7 = QLabel('Ускорение свободного падения (10^-2), м/с^2: ')
-        self.le_g = QLineEdit('980')
+        l7 = QLabel('Ускорение свободного падения (10^-3), м/с^2: ')
+        self.le_g = QLineEdit('9800')
         self.le_g.setValidator(QIntValidator(0, 1000000, self))
 
         l8 = QLabel('Начальная скорость полета, м/с: ')
@@ -307,12 +313,14 @@ class main_window(QWidget):
         l_meny.addWidget(self.le_m0)
         l_meny.addWidget(l2)
         l_meny.addWidget(self.le_mt)
+        l_meny.addWidget(l9)
+        l_meny.addWidget(self.le_mrs)
         l_meny.addWidget(l3)
         l_meny.addWidget(self.le_c)
         l_meny.addWidget(l4)
         l_meny.addWidget(self.le_p)
         l_meny.addWidget(l5)
-        l_meny.addWidget(self.le_s)
+        l_meny.addWidget(self.le_diam)
         l_meny.addWidget(l6)
         l_meny.addWidget(self.le_u)
         l_meny.addWidget(l7)
