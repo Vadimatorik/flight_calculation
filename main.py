@@ -100,50 +100,50 @@ class main_window(QWidget):
         self._init_widget()
 
     # Служебные методы для runge_kutt.
-    def Fx(self, t, v, q):                              # Функция производной координаты X.
+    def Fx(self, v, q):                              # Функция производной координаты X.
         return v*math.cos(q)
 
-    def Fy(self, t, v, q):                              # Функция производной координаты Y.
+    def Fy(self, v, q):                              # Функция производной координаты Y.
         return v*math.sin(q)
 
-    def Fv(self, t, v, q):                              # Функция производной скорости.
+    def Fv(self, v, q):                              # Функция производной скорости.
         if self.m > self.m0:
             self.m -= self.mr * self.h                   # Закон изменения массы снаряда.
-            self.dm=-self.mr * self.h
+            self.dm = -self.mr * self.h
         else:
             self.m=self.m0
             self.dm=0
         # Производная скорости.
         return 1/self.m*((-1)/2*self.c*self.p*self.s*math.pow(v, 2)-(self.u+v)*self.dm)-self.g*math.sin(q)
 
-    def Fq(self, t, v, q):                              # Функция производной угла полета.
+    def Fq(self, v, q):                              # Функция производной угла полета.
         if v == 0:
             return 0
         else:
             return -self.g/v*math.cos(q)
 
     # Метод вычисляет производные t, v, q, методом Рунге-Кутта.
-    def runge_kutt(self, t, v, q):
+    def runge_kutt(self, v, q):
         self.h = 0.05
-        k1 = self.h * self.Fx(t, v, q)           # Вычисление первых коэффициентов для д.у.
-        k2 = self.h * self.Fx(t+self.h/2, v, q)
-        k3 = self.h * self.Fx(t+self.h/2, v, q)
-        k4 = self.h * self.Fx(t+self.h, v, q)
+        k1 = self.h * self.Fx(v, q)           # Вычисление первых коэффициентов для д.у.
+        k2 = self.h * self.Fx(v, q)
+        k3 = self.h * self.Fx(v, q)
+        k4 = self.h * self.Fx(v, q)
 
-        l1 = self.h * self.Fy(t, v, q)           # Вычисление вторых коэффициентов для д.у.
-        l2 = self.h * self.Fy(t+self.h/2, v, q)
-        l3 = self.h * self.Fy(t+self.h/2, v, q)
-        l4 = self.h * self.Fy(t+self.h, v, q)
+        l1 = self.h * self.Fy(v, q)           # Вычисление вторых коэффициентов для д.у.
+        l2 = self.h * self.Fy(v, q)
+        l3 = self.h * self.Fy(v, q)
+        l4 = self.h * self.Fy(v, q)
 
-        m1 = self.h * self.Fv(t, v, q)           # Вычисление третьих коэффициентов для д.у.
-        m2 = self.h * self.Fv(t+self.h/2, v+m1/2, q)
-        m3 = self.h * self.Fv(t+self.h/2, v+m2/2, q)
-        m4 = self.h * self.Fv(t+self.h, v+m3, q)
+        m1 = self.h * self.Fv(v, q)           # Вычисление третьих коэффициентов для д.у.
+        m2 = self.h * self.Fv(v+m1/2, q)
+        m3 = self.h * self.Fv(v+m2/2, q)
+        m4 = self.h * self.Fv(v+m3, q)
 
-        n1 = self.h * self.Fq(t, v, q)           # Вычисление четвертых коэффициентов для д.у.
-        n2 = self.h * self.Fq(t+self.h/2, v, q+n1/2)
-        n3 = self.h * self.Fq(t+self.h/2, v, q+n2/2)
-        n4 = self.h * self.Fq(t+self.h, v, q+n3)
+        n1 = self.h * self.Fq(v, q)           # Вычисление четвертых коэффициентов для д.у.
+        n2 = self.h * self.Fq(v, q+n1/2)
+        n3 = self.h * self.Fq(v, q+n2/2)
+        n4 = self.h * self.Fq(v, q+n3)
 
         self.x += 1/6 * (k1+2*k2+2*k3+k4)   # Вычисление производных координат x, y, скорости, угла полета.
         self.y += 1/6 * (l1+2*l2+2*l3+l4)
@@ -176,6 +176,7 @@ class main_window(QWidget):
             # Получаемые в ходе расчета переменные.
             x_end_fuel = 0                                          # Тут будет лежать точка по x, где закончится топливо.
             y_end_fuel = 0
+            t_end_fuel = 0                                          # Время горения топлива.
             y_max_gr = 0                                            # Вершина графика.
             x_mex_y_grap = 0
             flag = False                                            # Просто чтобы в нужный момент захватить координаты
@@ -188,17 +189,18 @@ class main_window(QWidget):
 
             while 1:
                 self.graph.add_point(self.x, self.y)                # Старт в точка 0.0, а потом и остальные координаты.
-                self.runge_kutt(self.t, self.v, self.q)
+                self.runge_kutt(self.v, self.q)
                 if self.y <= 0:                                     # Если полши в минус - выходим.
                     break
                 if self.y > y_max_gr:                               # Получаем самую высокую точку полета.
                     y_max_gr = self.y
                     x_mex_y_grap = self.x
-                # Этот кусок выполнятся 1 раз.
+                # Этот кусок выполнятся 1 раз.                      Тут закончилась масса.
                 if (self.m <= self.m0) and flag == False:
                     flag = True
                     x_end_fuel = self.x
                     y_end_fuel = self.y
+                    t_end_fuel = self.t
 
             # Выбираем цвет (предполагаем, что возможно до 7 графиков за раз.
             if self.loop_color == 0:
@@ -240,6 +242,7 @@ class main_window(QWidget):
             self.q_log.insertPlainText('Топливо закончится в точке:\t\t\tX = %.2f метров,\tY = %.2f метров.\n' % (x_end_fuel, y_end_fuel))
             self.q_log.insertPlainText('Самая высокая точка имеет координаты:\t\tX = %.2f метров,\tY = %.2f метров.\n' % (x_mex_y_grap, y_max_gr))
             self.q_log.insertPlainText('Координата падения по оси X:\t\t\t%.2f метров.\n' % self.x)
+            self.q_log.insertPlainText('Время горения топлива:\t\t\t%.2f секунд.\n' % t_end_fuel)
             self.q_log.insertPlainText('Время полета:\t\t\t\t%.2f секунд.\n\n' % self.t)
 
             # Готовимся к новому цвету
