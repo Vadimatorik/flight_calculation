@@ -50,7 +50,6 @@ class plotCanvas(FigureCanvas):
         self.x_array.append(x)
         self.y_array.append(y)
 
-
     def print_graph(self, color):
         self.ax.plot(self.x_array, self.y_array, color)
         self.ax.axis([0, self.max_size, 0, self.max_size])
@@ -80,7 +79,7 @@ class main_window(QWidget):
         # Объявляем все необходимые переменные.
         self.c = 0.2
         self.p = 1.29
-        self.s = 0.25
+        self.s = 0.25        # Площадь сечения снаряда.
         self.u = 300         # Скорость выхода газов.
         self.g = 9.8
         self.mt = 30         # Масса топлива.
@@ -90,65 +89,39 @@ class main_window(QWidget):
         self.m = 0          # Общая масса.
         self.dm = 0.0       # Производная массы снаряда.
         self.t = 0.0        # Время полета.
-        self.v = 30         # Скорость полета.
-        self.q = 45 * math.pi / 180
+        self.v = 0          # Скорость полета (текущая).
+        self.q = 45 * math.pi / 180         # Угол наклона.
         self.x = 0.0        # Координаты полета.
         self.y = 0.0
+        self.h = 0.05       # Интервалы расчета.
 
+        self.R = self.mr * self.u
         self.loop_color = 0 # С помощью этой переменной согласуем цвета между графиками и тестовым полем.
 
         self._init_widget()
 
-    # Служебные методы для runge_kutt.
-    def Fx(self, v, q):                              # Функция производной координаты X.
-        return v*math.cos(q)
-
-    def Fy(self, v, q):                              # Функция производной координаты Y.
-        return v*math.sin(q)
-
-    def Fv(self, v, q):                              # Функция производной скорости.
-        if self.m > self.m0:
-            self.m -= self.mr * self.h                   # Закон изменения массы снаряда.
-            self.dm = -self.mr * self.h
-        else:
-            self.m=self.m0
-            self.dm=0
-        # Производная скорости.
-        return 1/self.m*((-1)/2*self.c*self.p*self.s*math.pow(v, 2)-(self.u+v)*self.dm)-self.g*math.sin(q)
-
-    def Fq(self, v, q):                              # Функция производной угла полета.
-        if v == 0:
-            return 0
-        else:
-            return -self.g/v*math.cos(q)
-
     # Метод вычисляет производные t, v, q, методом Рунге-Кутта.
-    def runge_kutt(self, v, q):
-        self.h = 0.05
-        k1 = self.h * self.Fx(v, q)           # Вычисление первых коэффициентов для д.у.
-        k2 = self.h * self.Fx(v, q)
-        k3 = self.h * self.Fx(v, q)
-        k4 = self.h * self.Fx(v, q)
+    def runge_kutt(self):
+        X = self.c * (self.p * math.pow(self.v, 2)) / 2 * self.s        # Получаем коэффициент сопротивления.
 
-        l1 = self.h * self.Fy(v, q)           # Вычисление вторых коэффициентов для д.у.
-        l2 = self.h * self.Fy(v, q)
-        l3 = self.h * self.Fy(v, q)
-        l4 = self.h * self.Fy(v, q)
+        Fx = (self.R - X) * math.cos(self.q)
+        Fy = (self.R - X) * math.sin(self.q) - self.g * self.m
 
-        m1 = self.h * self.Fv(v, q)           # Вычисление третьих коэффициентов для д.у.
-        m2 = self.h * self.Fv(v+m1/2, q)
-        m3 = self.h * self.Fv(v+m2/2, q)
-        m4 = self.h * self.Fv(v+m3, q)
+        Uy = self.v * math.sin(self.q)      # Раскладываем вектор скорости на оси.
+        Ux = self.v * math.cos(self.q)
 
-        n1 = self.h * self.Fq(v, q)           # Вычисление четвертых коэффициентов для д.у.
-        n2 = self.h * self.Fq(v, q+n1/2)
-        n3 = self.h * self.Fq(v, q+n2/2)
-        n4 = self.h * self.Fq(v, q+n3)
+        Uy += Fy / self.m * self.h            # Изменяем каждый вектор.
+        Ux += Fx / self.m * self.h
 
-        self.x += 1/6 * (k1+2*k2+2*k3+k4)   # Вычисление производных координат x, y, скорости, угла полета.
-        self.y += 1/6 * (l1+2*l2+2*l3+l4)
-        self.v += 1/6 * (m1+2*m2+2*m3+m4)
-        self.q += 1/6 * (n1+2*n2+2*n3+n4)
+        self.x += Ux*self.h
+        self.y += Uy*self.h
+        self.q = math.atan(Uy/Ux)
+        self.v = math.sqrt(math.pow(Ux, 2) + math.pow(Uy, 2))
+
+        if self.m >= self.m0:
+            self.m -= self.mr * self.h
+        else:
+            self.R = 0
 
         self.t += self.h
 
@@ -172,6 +145,7 @@ class main_window(QWidget):
             self.m0 = int(self.le_m0.text())
             self.m = self.m0 + self.mt
             self.mr = int(self.le_mrs.text())
+            self.R = self.mr * self.u     # Эта переменная одинакова на протяжении горения топлива. Потом 0.
 
             # Получаемые в ходе расчета переменные.
             x_end_fuel = 0                                          # Тут будет лежать точка по x, где закончится топливо.
@@ -189,7 +163,7 @@ class main_window(QWidget):
 
             while 1:
                 self.graph.add_point(self.x, self.y)                # Старт в точка 0.0, а потом и остальные координаты.
-                self.runge_kutt(self.v, self.q)
+                self.runge_kutt()
                 if self.y <= 0:                                     # Если полши в минус - выходим.
                     break
                 if self.y > y_max_gr:                               # Получаем самую высокую точку полета.
@@ -300,7 +274,7 @@ class main_window(QWidget):
         self.le_g.setValidator(QIntValidator(0, 1000000, self))
 
         l8 = QLabel('Начальная скорость полета, м/с: ')
-        self.le_v = QLineEdit('30')
+        self.le_v = QLineEdit('0')
         self.le_v.setValidator(QIntValidator(1, 1000000, self))
 
         # Кнопки.
