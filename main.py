@@ -8,21 +8,18 @@ import sys
 import math
 
 # Для работы pyqt.
-from PyQt5.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QApplication, QLabel, QLineEdit)
+from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QLineEdit)
 
 # Для рисования QT оболочки.
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QVBoxLayout, QSizePolicy, QMessageBox, QWidget, \
-    QPushButton, QGridLayout, QTextEdit
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QSizePolicy, QWidget, QPushButton, QTextEdit
 
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtGui import QIcon
-
 # Для построение графика.
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import numpy as np
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Создаем поле для рисования графика.
@@ -36,10 +33,10 @@ class plotCanvas(FigureCanvas):
         FigureCanvas.updateGeometry(self)
         self.ax = self.figure.add_subplot(111)
         self.ax.set_title('Flight path')
-        self.ax.hold(True)                                  # Когда кидаем новые данные - старые стирать нельзя.
         self.ax.axis([0, self.max_size, 0, self.max_size])
         self.x_array = []
         self.y_array = []
+        plt.show()
 
     def add_point(self, x, y):
         # Вычисляем большую грань.
@@ -206,10 +203,10 @@ class main_window(QWidget):
             self.q_log.insertPlainText('Исходная масса ракеты без топлива:\t\t' + self.le_m0.text() + ' кг.\n')
             self.q_log.insertPlainText('Масса топлива при старте:\t\t\t' + self.le_mt.text() + ' кг.\n')
             self.q_log.insertPlainText('Коэффициент сопротивления воздуха:\t\t%.2f' % self.c + '.\n')
-            self.q_log.insertPlainText('Плотность воздуха:\t\t\t\t%.2f' % self.p + ' кг/м^3.\n')
-            self.q_log.insertPlainText('Площадь поперечного сечения:\t\t\t%.2f' % self.s + ' м^2.\n')
+            self.q_log.insertPlainText('Плотность воздуха:\t\t\t%.2f' % self.p + ' кг/м^3.\n')
+            self.q_log.insertPlainText('Площадь поперечного сечения:\t\t%.2f' % self.s + ' м^2.\n')
             self.q_log.insertPlainText('Скорость выхода газов:\t\t\t%.2f' % self.u + ' м/с.\n')
-            self.q_log.insertPlainText('Ускорение свободного падения: \t\t\t%.2f' % self.g + ' м/с^2.\n')
+            self.q_log.insertPlainText('Ускорение свободного падения: \t\t%.2f' % self.g + ' м/с^2.\n')
             self.q_log.insertPlainText('Начальная скорость полета:\t\t\t%.2f' % self.v + ' м/с.\n')
 
             # Итоги расчета.
@@ -250,7 +247,7 @@ class main_window(QWidget):
         self.le_mt.setValidator(QIntValidator(0, 1000000, self))
 
         l9 = QLabel('Расход топлива в секунду, кг: ')
-        self.le_mrs = QLineEdit('3')
+        self.le_mrs = QLineEdit('10')
         self.le_mrs.setValidator(QIntValidator(0, 1000000, self))
 
         l3 = QLabel('Коэффициент сопротивления воздуха (10^-3): ')
