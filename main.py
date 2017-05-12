@@ -62,6 +62,7 @@ class plotCanvas(FigureCanvas):
         self.max_size = 300
         self.ax.axis([0, self.max_size, 0, self.max_size])
         self.ax.clear()
+        self.ax.set_title('Flight path')
         self.draw()
 
 #-----------------------------------------------------------------------------------------------------------------------
